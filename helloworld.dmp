@@ -1,0 +1,31 @@
+00001  0000             ; HELLO FROM CBM PRG STUDIO!
+00002  0001             
+00003  0001             *=$C000
+00004  C000             
+00005  C000  A2 00      START      LDX #$0
+00006  C002  BD 11 C0   CYCLE      LDA HWORLD,X  ;TEST
+00007  C005  C9 00                 CMP #0
+00008  C007  F0 07                 BEQ EXIT
+00009  C009  9D 00 04              STA $0400,X
+00010  C00C  E8                    INX
+00011  C00D  4C 02 C0              JMP CYCLE
+00012  C010  60         EXIT       RTS
+00013  C011             
+00014  C011  08 05 0C   HWORLD     TEXT 'HELLO WORLD!'
+00015  C01D  00                    BYTE 0
+00016  C01E             
+
+******* 4 Label(s) *******
+cycle = $C002 
+exit = $C010 
+hworld = $C011 
+start = $C000 
+
+******* 1 Unused label(s) *******
+start
+
+******* 1 Variable(s) *******
+tgt_c64  = $0001
+******* 1 Unused variables(s) *******
+tgt_c64
+
