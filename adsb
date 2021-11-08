@@ -1,0 +1,187 @@
+https://gitlab.com/skyhuborg/tracker/-/issues/37
+Integrate ADS-B/UAT into SensorMonitor
+
+James Price
+James Price @DrUFO · 1 year ago
+bookmarking this for now .. to do
+
+Steve's thoughts: run dump1090 and inject the json output from it to upload with protobuf
+
+https://github.com/ress/readsb-protobuf
+
+https://gitlab.com/skyhuborg/tracker/-/blob/master/internal/sensor/sensor.go
+
+sensor.go shows how we poll and pack the data from the sensors and trackerd.proto is where we define the protobufs for all of the messages https://gitlab.com/skyhuborg/proto/-/blob/master/trackerd/trackerd.proto
+
+Edited by James Price 1 year ago
+Steve McDaniel @nibbleshift removed 
+To Do
+ label 1 year ago
+Steve McDaniel
+Steve McDaniel @nibbleshift · 1 year ago
+Author
+Owner
+I like that approach. For this task, we'll be using the Nooelec NanoSDR v3. We'll be providing capabilities to cover 978Mhz and 1090Mhz.
+
+I will start exploring this further. It would be great to take advantage of readsb-protobuf since it fits nicely into our existing sensor report.
+
+Steve McDaniel @nibbleshift changed title from Integrate flight aware into SensorMonitor to Integrate ADS-B/UAT into SensorMonitor 1 year ago
+James Price
+James Price @DrUFO · 10 months ago
+Steps to integrate ADS-B/UAT data (includes live map of aircraft and performance statistics charts)
+
+Add kernel blacklist and unload RTL modules
+Reserializing of each nooelec stick to reflect its frequency.
+Add /etc/udev/rules.d/99-skyhub-device.rules to bring up 1090 and 978 devices in /dev
+Use docker-readsb-protobuf containers to write to .pb files for now, db in the future
+==========================================
+
+Add blacklist rules to /etc/modprobe.d/blacklist-rtl2832.conf:
+
+   blacklist rtl2832
+
+   blacklist dvb_usb_rtl28xxu
+
+   blacklist rtl2832_sdr
+Unload the kernel modules:
+
+    sudo rmmod rtl2832_sdr
+
+    sudo rmmod dvb_usb_rtl28xxu
+
+    sudo rmmod rtl2832
+Give the two nooelec sticks unique serial numbers (for details, refer to docs at https://mikenye.gitbook.io/ads-b/setting-up-rtl-sdrs/re-serialise-sdrs)
+
+First change the 1090MHz stick's serial number to 1090:
+
+    sudo docker run --rm -it --device /dev/bus/usb --entrypoint rtl_eeprom mikenye/readsb-protobuf -s 1090
+Next, after unplugging the 1090 stick and replacing with the 978 stick, change its serial number to 978:
+
+    sudo docker run --rm -it --device /dev/bus/usb --entrypoint rtl_eeprom mikenye/readsb-protobuf -s 978
+Now the SDR used for ADS-B Mode-S 1090MHz reception will have serial number 1090, and the SDR used for ADS-B UAT 978MHz will have serial number 978.
+
+Adding rules to /etc/udev/rules.d/99-skyhub-device.rules:
+
+Where do we get the information for the rules? Here is a nano with a nooelec 1090, a nooelec 978, and a Flightaware Pro connected:
+
+j@skyhub-tracker:~$ lsusb|grep RTL
+
+   Bus 001 Device 005: ID 0bda:2832 Realtek Semiconductor Corp. RTL2832U DVB-T
+
+   Bus 001 Device 007: ID 0bda:2838 Realtek Semiconductor Corp. RTL2838 DVB-T
+
+   Bus 001 Device 006: ID 0bda:2838 Realtek Semiconductor Corp. RTL2838 DVB-T
+j@skyhub-tracker:~$ udevadm info --name=/dev/bus/usb/001/007 --attribute-walk|grep serial
+
+    ATTR{serial}=="1090"
+
+    ATTRS{serial}=="70090000.xusb"
+Add these lines to /etc/udev/rules.d/99-skyhub-device.rules
+
+  #add 1090 and 978 nooelecs on correct devices by serial
+
+  ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", ATTRS{serial}=="1090",SYMLINK+="skyhub-1090" MODE="0777"
+
+  ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", ATTRS{serial}=="978",SYMLINK+="skyhub-978" MODE="0777"
+Pass the devices to the docker containers in this format:
+
+--device=/dev/$(readlink /dev/skyhub-1090):/dev/$(readlink /dev/skyhub-1090) \
+
+Working example launch script for the 1090 container (change to your own TZ, READSB_LAT and READSB_LON values), putting the web server on port 8082:
+
+sudo docker run
+-d
+-it
+--restart=always
+--ipc=host
+--network skyhub-network
+--name readsb
+--hostname readsb
+--device=/dev/$(readlink /dev/skyhub-1090):/dev/$(readlink /dev/skyhub-1090)
+-p 8082:8080
+-p 30005:30005
+-e TZ=Australia/Perth
+-e READSB_DCFILTER=true
+-e READSB_DEVICE_TYPE=rtlsdr
+-e READSB_FIX=true
+-e READSB_GAIN=autogain
+-e READSB_LAT=33.33333
+-e READSB_LON=115.11111
+-e READSB_MODEAC=true
+-e READSB_RX_LOCATION_ACCURACY=2
+-e READSB_STATS_RANGE=true
+-e READSB_NET_ENABLE=true
+-v readsbpb_autogain:/run/autogain
+-v readsbpb_rrd:/run/collectd
+mikenye/readsb-protobuf
+
+To view the readsb-protobuf container in the docker ps list:
+
+j@skyhub-tracker:~$ sudo docker ps|grep readsb
+
+ 3b63398164bb   mikenye/readsb-protobuf   "/init"   13 hours ago  Up 9 hours (healthy) 0.0.0.0:30005->30005/tcp, 0.0.0.0:8082->8080/tcp  
+A similar container is run for 978 with some modifications.
+
+The text-format aircraft tracker executable is at /usr/local/bin/viewadsb
+
+j@skyhub-tracker:~$ sudo docker exec -it 3b63398164bb ls -l /usr/local/bin/viewadsb
+
+  Hex    Mode  Sqwk  Flight   Alt    Spd  Hdg    Lat      Long   RSSI  Msgs  Ti -
+ ────────────────────────────────────────────────────────────────────────────────
+  A891E5 S     3315  QXE2103  36000  319  357   45.627 -122.583  -8.4   406  6
+  A2FAD8 S     3216  SKW3566  36000  326  357   45.482 -122.572  -6.0   172  0
+  A85CE8 S     3351  QXE2252  36000  301  342   45.232 -122.363 -10.0   146  0
+  A4BCF1 S     3565  QXE2253  12900  333  161   45.279 -122.120  -3.8   868  1
+  A27E33 S     4672  AMF3118   7050  208  158   45.410 -122.385  -6.8   195  0
+The pb data files and performance graphs are stored in /run/readsb/ and the protocol buffer messages are defined in readsb.proto
+
+The pb files can be decoded using the protoc-c compiler, ie
+
+  protoc-c --decode=AircraftsUpdate readsb.proto < aircraft.pb
+  protoc-c --decode=AircraftsUpdate readsb.proto < history_55.pb
+  protoc-c --decode=Statistics readsb.proto < stats.pb
+  protoc-c --decode=Receiver readsb.proto < receiver.pb
+For more information on working with these pb files, see https://github.com/Mictronics/readsb-protobuf/blob/dev/README-protobuffer.md
+
+View your tracker's live aircraft tracking map at http://skyhub-tracker.local:8082/
+
+View your aircraft tracking performance graphs at http://skyhub-tracker.local:8082/graphs/
+
+This technique will also work with Flightaware Pro sticks and RTLSDRs if appropriate /etc/udev/rules.d/99-skyhub-device.rules entries are added to assign them to /dev/skyhub-1090 (use the appropriate autogain option):
+
+#Flightaware Pro
+ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2832", SYMLINK+="skyhub-1090" MODE="0777"
+#RTLSDR
+ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", SYMLINK+="skyhub-1090" MODE="0777"
+Edited by James Price 10 months ago
+Steve McDaniel @nibbleshift closed 1 week ago
+Please register or sig
+
+
+Edited 1 year ago by Steve McDaniel
+
+Drag your designs here or click to upload.
+
+Linked issues
+0
+ 
+Steve McDaniel @nibbleshift changed milestone to %v2 1 year ago
+Steve McDaniel @nibbleshift added 
+To Do
+ label 1 year ago
+James Price
+James Price @DrUFO · 1 year ago
+bookmarking this for now .. to do
+
+Steve's thoughts: run dump1090 and inject the json output from it to upload with protobuf
+
+https://github.com/ress/readsb-protobuf
+
+https://gitlab.com/skyhuborg/tracker/-/blob/master/internal/sensor/sensor.go
+
+sensor.go shows how we poll and pack the data from the sensors and trackerd.proto is where we define the protobufs for all of the messages https://gitlab.com/skyhuborg/proto/-/blob/master/trackerd/trackerd.proto
+
+Edited by James Price 1 year ago
+Steve McDaniel @nibbleshift removed 
+To Do
+ label 1 year ago
