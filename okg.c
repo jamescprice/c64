@@ -70,7 +70,7 @@ loc1eff:     LDA #$00
 done:
      }
 c = *(char *) 0x04f0;
-//printf("C IS %c %d ", c, c);
+printf("C IS %c %d ", c, c);
 if (c==157)  {
                    xpos--;
                      xpos--;
@@ -104,6 +104,12 @@ else if (c==145)  {
                    }
                    gotoxy(xpos,ypos);
                  }
+else if (c==13)  {
+                   ypos=0; 
+                   xpos=0;
+                   gotoxy(xpos,ypos);
+                 }
+
 }
 }
 
