@@ -1,3 +1,7 @@
+
+
+from https://archive.org/details/COMPUTES_First_Book_of_Commodore_64_1983_COMPUTE_Publications/page/n179/mode/2up
+
 1 poke53281,1:gosub190:gosub300 
 2 x=0 : poke191 , 0: poke55 ,0 : poke56 , 128 : r=33024 
 3 ifpeek(191)=255orpeek(191)=0thenpoke19 1,peek(191) 
