@@ -11,7 +11,7 @@ from https://archive.org/details/COMPUTES_First_Book_of_Commodore_64_1983_COMPUT
 12 a=peek ( 197 ) : ifa=6 thenx=x-1 : ifx+1 < 0thenx=x+l+256 : fl=l : goto20 
 13 a=peek( 197 ) : ifa=5thenx=x-40 : ifx-40<0thenx=256+x-40 : bl=l : goto25 
 20 ifpeek(191) <>255thenifa=4andf1=1thenz=l:poke191,peek(191)+z:fl=0:goto28 
-21 ifpeek(191)=255thenifa=4andf1=1thenz= 1 : poke191 , peek( 191 ) -256+z : f1=0 : got028 
+21 ifpeek(191)=255thenifa=4andf1=1thenz= 1 : poke191 , peek( 191 ) -256+z : f1=0 : goto28 
 22 ifpeek(191)=0thenifa=5andb1=1thenz=-1 :poke191, peek ( 191)+256+z:bl=0:goto28 
 25 ifpeek(191)<>0thenifa=5andb1=1thenz=- l:poke191, peek ( 191 )+z:bl=0 
 28 ifpeek(191)=255andpeek(2)=255thenpoke 191,0:poke2,0 
