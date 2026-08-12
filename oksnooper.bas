@@ -9,7 +9,7 @@ from https://archive.org/details/COMPUTES_First_Book_of_Commodore_64_1983_COMPUT
 10 a=peek( 197 ) : ifa=4thenx=x+40 : ifx+40>255thenx=x+40-256 : fl=l : goto20 
 11 a=peek(197):ifa=3thenx=x+1:ifx+1>255thenx=x+l-256 : fl=l : goto20 
 12 a=peek ( 197 ) : ifa=6 thenx=x-1 : ifx+1 < 0thenx=x+l+256 : fl=l : goto20 
-13 a=peek( 197 ) : ifa=5thenx=x-40 : ifx-40<0thenx=256+x-40 : bl=l : got025 
+13 a=peek( 197 ) : ifa=5thenx=x-40 : ifx-40<0thenx=256+x-40 : bl=l : goto25 
 20 ifpeek(191) <>255thenifa=4andf1=1thenz=l:poke191,peek(191)+z:fl=0:goto28 
 21 ifpeek(191)=255thenifa=4andf1=1thenz= 1 : poke191 , peek( 191 ) -256+z : f1=0 : got028 
 22 ifpeek(191)=0thenifa=5andb1=1thenz=-1 :poke191, peek ( 191)+256+z:bl=0:goto28 
@@ -21,7 +21,7 @@ from https://archive.org/details/COMPUTES_First_Book_of_Commodore_64_1983_COMPUT
 39 poke2,x:sys49152 
 
 40 print"{home}";peek(191)*256+peek(2); : got03 
-190 forr=49152t049152+65:readj:poker,j:next : return 
+190 forr=49152to49152+65:readj:poker,j:next : return 
 200 data 165, 2, 133, 251, 165, 191, 133, 252, 169, 0, 133 
 210 data 253, 169, 4, 133, 254, 162, 4, 177, 251, 145 
 220 data 253, 200, 208, 249, 230, 252, 230, 254, 202, 208 
